@@ -1,0 +1,8 @@
+psycopg2-binary
+pandas
+streamlit
+google-generativeai
+python-dotenv
+fastapi
+uvicorn
+requests
