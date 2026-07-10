@@ -6,8 +6,11 @@ import re
 
 from fastapi import HTTPException
 from google import generativeai as genai
+from google.api_core import exceptions as google_exceptions
 
-from fastapi_backend.config import GEMINI_API_KEY, MODEL_NAME, SCHEMA_CONTEXT
+from fastapi_backend import config
+from fastapi_backend.config import SCHEMA_CONTEXT, get_gemini_api_key
+from fastapi_backend.services.fallback_sql import fallback_sql_for_prompt
 
 
 FORBIDDEN_PATTERN = re.compile(r"\b(insert|update|delete|drop|alter|truncate)\b", re.IGNORECASE)
@@ -54,19 +57,15 @@ SQL:
 
 
 def configure_model() -> None:
-    if "YOUR_GEMINI_API_KEY" in GEMINI_API_KEY:
+    api_key = get_gemini_api_key()
+    if not api_key or "YOUR_GEMINI_API_KEY" in api_key:
         raise HTTPException(status_code=500, detail="GEMINI_API_KEY is not configured.")
-    genai.configure(api_key=GEMINI_API_KEY)
+    genai.configure(api_key=api_key)
 
 
-def generate_sql(user_request: str) -> str:
-    if len(user_request.strip()) < 5:
-        raise HTTPException(status_code=400, detail="Please enter at least 5 characters before generating SQL.")
-    if is_blocked_text(user_request):
-        raise HTTPException(status_code=400, detail="Only read-only SELECT queries are allowed.")
-
+def _generate_with_gemini(user_request: str) -> str:
     configure_model()
-    model = genai.GenerativeModel(MODEL_NAME)
+    model = genai.GenerativeModel(config.MODEL_NAME)
     response = model.generate_content(build_prompt(user_request))
     response_text = getattr(response, "text", "") or ""
     generated_sql = strip_code_fences(response_text)
@@ -75,3 +74,39 @@ def generate_sql(user_request: str) -> str:
         raise HTTPException(status_code=400, detail="The generated SQL was not a read-only SELECT query.")
 
     return generated_sql
+
+
+def generate_sql(user_request: str) -> str:
+    if len(user_request.strip()) < 5:
+        raise HTTPException(status_code=400, detail="Please enter at least 5 characters before generating SQL.")
+    if is_blocked_text(user_request):
+        raise HTTPException(status_code=400, detail="Only read-only SELECT queries are allowed.")
+
+    try:
+        return _generate_with_gemini(user_request)
+    except HTTPException:
+        raise
+    except google_exceptions.ResourceExhausted as exc:
+        fallback_sql = fallback_sql_for_prompt(user_request)
+        if fallback_sql and is_read_only_sql(fallback_sql):
+            return fallback_sql
+        raise HTTPException(
+            status_code=503,
+            detail="Gemini API quota exceeded. Check billing/limits at https://ai.dev/rate-limit or try again in a minute.",
+        ) from exc
+    except google_exceptions.GoogleAPIError as exc:
+        fallback_sql = fallback_sql_for_prompt(user_request)
+        if fallback_sql and is_read_only_sql(fallback_sql):
+            return fallback_sql
+        raise HTTPException(
+            status_code=502,
+            detail=f"Gemini API error: {str(exc)[:240]}",
+        ) from exc
+    except Exception as exc:
+        fallback_sql = fallback_sql_for_prompt(user_request)
+        if fallback_sql and is_read_only_sql(fallback_sql):
+            return fallback_sql
+        raise HTTPException(
+            status_code=502,
+            detail="Unable to generate SQL from the language model right now.",
+        ) from exc

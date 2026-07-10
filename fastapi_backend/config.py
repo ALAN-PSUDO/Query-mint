@@ -3,15 +3,27 @@
 from __future__ import annotations
 
 import os
+from pathlib import Path
 
 from dotenv import load_dotenv
 
 
-load_dotenv()
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+load_dotenv(PROJECT_ROOT / ".env", override=True)
 
-DB_URL = os.getenv("DB_URL", "USER:PASSWORD@HOST:5432/DB_NAME")
+DB_URL = (
+    os.getenv("DB_URL")
+    or os.getenv("DATABASE_URL")
+    or os.getenv("NEON_DATABASE_URL")
+    or "USER:PASSWORD@HOST:5432/DB_NAME"
+)
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "YOUR_GEMINI_API_KEY")
-MODEL_NAME = "gemini-2.5-flash"
+MODEL_NAME = os.getenv("GEMINI_MODEL", "gemini-flash-latest")
+
+
+def get_gemini_api_key() -> str:
+    load_dotenv(PROJECT_ROOT / ".env", override=True)
+    return os.getenv("GEMINI_API_KEY", "YOUR_GEMINI_API_KEY")
 
 SCHEMA_CONTEXT = """
 Database schema:

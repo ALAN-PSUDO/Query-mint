@@ -22,6 +22,10 @@ The seeded database contains three related tables:
 
 The schema supports common analytic queries such as user lookup, stock checks, and order/spend aggregations. `orders.user_id` references `users.user_id`, and `orders.product_id` references `products.product_id`.
 
+## If you do not have data yet
+
+Use the built-in demo mode to test the app without a live database. In the Streamlit sidebar, turn on `Demo mode (no backend required)` to run the sample prompts against local sample rows. You can also set `DEMO_MODE=true` in your `.env` file to start in demo mode automatically.
+
 ## Local setup
 
 1. Create and activate the project virtual environment if needed.
@@ -41,6 +45,18 @@ $env:API_BASE_URL = "http://127.0.0.1:8000"
 
 Or create a `.env` file in the project root using the same keys.
 
+For Neon, set `NEON_DATABASE_URL` or `DATABASE_URL` to the full connection string from Neon, for example:
+
+```powershell
+$env:NEON_DATABASE_URL = "postgresql://postgres:<password>@<host>.neon.tech/<database>?sslmode=require"
+```
+
+You can then run the fast setup helper:
+
+```powershell
+.\setup_neon.ps1
+```
+
 4. Start the FastAPI backend:
 
 ```powershell
@@ -52,6 +68,8 @@ Or create a `.env` file in the project root using the same keys.
 ```powershell
 .\.venv\Scripts\python.exe seed.py
 ```
+
+The seed script now accepts `DB_URL`, `DATABASE_URL`, or `NEON_DATABASE_URL`.
 
 6. Launch the Streamlit frontend:
 

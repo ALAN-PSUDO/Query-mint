@@ -15,9 +15,11 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-DB_URL = os.getenv(
-	"DB_URL",
-	"USER:PASSWORD@HOST:5432/DB_NAME",
+DB_URL = (
+	os.getenv("DB_URL")
+	or os.getenv("DATABASE_URL")
+	or os.getenv("NEON_DATABASE_URL")
+	or "USER:PASSWORD@HOST:5432/DB_NAME"
 )
 
 RANDOM_SEED = 42
@@ -258,7 +260,7 @@ def seed_data(connection) -> None:
 
 def main() -> None:
 	if "USER:PASSWORD@HOST:5432/DB_NAME" in DB_URL:
-		print("Update DB_URL before running seed.py.")
+		print("Set DB_URL, DATABASE_URL, or NEON_DATABASE_URL before running seed.py.")
 		raise SystemExit(1)
 
 	with psycopg2.connect(DB_URL) as connection:
