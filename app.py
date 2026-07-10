@@ -17,6 +17,172 @@ load_dotenv()
 API_BASE_URL = os.getenv("API_BASE_URL", "http://127.0.0.1:8000")
 
 
+def apply_theme() -> None:
+    st.markdown(
+        """
+        <style>
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap');
+
+        :root {
+            --bg: #f3f7f5;
+            --surface: #ffffff;
+            --ink: #0f2a24;
+            --muted: #5b6d66;
+            --accent: #127a66;
+            --accent-2: #e88a2e;
+            --ring: #cde8e2;
+        }
+
+        .stApp {
+            font-family: 'Space Grotesk', sans-serif;
+            color: var(--ink);
+            background:
+                radial-gradient(circle at 8% 8%, #dff3ed 0%, transparent 40%),
+                radial-gradient(circle at 92% 0%, #ffe7cc 0%, transparent 38%),
+                var(--bg);
+        }
+
+        .main .block-container {
+            padding-top: 1.4rem;
+            padding-bottom: 2rem;
+        }
+
+        .hero {
+            background: linear-gradient(145deg, #0f2a24 0%, #154a3f 55%, #127a66 100%);
+            color: #ecfffa;
+            border: 1px solid #1e6152;
+            border-radius: 18px;
+            padding: 1.2rem 1.4rem;
+            box-shadow: 0 18px 36px rgba(15, 42, 36, 0.18);
+            margin-bottom: 1rem;
+        }
+
+        .hero h1 {
+            margin: 0;
+            font-size: 1.6rem;
+            line-height: 1.25;
+            letter-spacing: 0.01em;
+        }
+
+        .hero p {
+            margin: 0.55rem 0 0;
+            color: #d1f1e8;
+        }
+
+        .chip-row {
+            margin-top: 0.8rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.45rem;
+        }
+
+        .chip {
+            display: inline-block;
+            padding: 0.24rem 0.62rem;
+            border-radius: 999px;
+            border: 1px solid rgba(255, 255, 255, 0.28);
+            background: rgba(255, 255, 255, 0.11);
+            color: #e9fffa;
+            font-size: 0.78rem;
+        }
+
+        .panel-title {
+            margin: 0.35rem 0 0.55rem;
+            font-size: 1.03rem;
+            font-weight: 700;
+            color: var(--ink);
+        }
+
+        .stTextInput label, .stTextArea label {
+            font-weight: 700;
+            color: var(--ink);
+        }
+
+        .stTextArea textarea {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            border: 1px solid var(--ring);
+        }
+
+        .stTextInput input {
+            border: 1px solid var(--ring);
+        }
+
+        .stButton > button {
+            border-radius: 12px;
+            border: 1px solid #cfe5df;
+            background: #ffffff;
+            color: var(--ink);
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .stButton > button:hover {
+            border-color: #9dcfc3;
+            background: #f7fcfa;
+            transform: translateY(-1px);
+        }
+
+        .stDownloadButton > button {
+            border-radius: 12px;
+            border: 1px solid #f4c48e;
+            background: #fff7ee;
+            color: #8c4d0b;
+            font-weight: 700;
+        }
+
+        [data-testid="stDataFrame"] {
+            border: 1px solid var(--ring);
+            border-radius: 12px;
+            background: var(--surface);
+        }
+
+        [data-testid="stSidebar"] {
+            background: #f8fcfa;
+            border-right: 1px solid #dcebe6;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_header() -> None:
+    st.markdown(
+        f"""
+        <section class="hero">
+            <h1>query-mint · Ask, Inspect, Execute</h1>
+            <p>Translate natural language into safe PostgreSQL, review the SQL, and run it against live data.</p>
+            <div class="chip-row">
+                <span class="chip">FastAPI backend</span>
+                <span class="chip">Editable SQL</span>
+                <span class="chip">Session history</span>
+                <span class="chip">CSV export</span>
+                <span class="chip">API: {API_BASE_URL}</span>
+            </div>
+        </section>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_quick_prompts() -> None:
+    st.markdown('<div class="panel-title">Quick Start Prompts</div>', unsafe_allow_html=True)
+    quick_prompts = [
+        "List all users",
+        "Show me all orders placed in the last 30 days",
+        "How many products are out of stock?",
+        "Find the top 5 customers by total spend",
+    ]
+
+    columns = st.columns(4)
+    for index, example in enumerate(quick_prompts):
+        with columns[index]:
+            if st.button(example, key=f"quick_prompt_{index}", use_container_width=True):
+                st.session_state.nl_prompt = example
+                st.rerun()
+
+
 def initialize_session_state() -> None:
     defaults: dict[str, Any] = {
         "nl_prompt": "",
@@ -83,7 +249,7 @@ def load_history_item(index: int) -> None:
 
 
 def show_history_sidebar() -> None:
-    st.sidebar.header("Query History")
+    st.sidebar.markdown("### Query History")
     if not st.session_state.history:
         st.sidebar.caption("No queries yet.")
         return
@@ -127,6 +293,7 @@ def api_post(path: str, payload: dict[str, Any]) -> dict[str, Any]:
 
 
 def show_connection_status() -> None:
+    st.sidebar.markdown("### Backend Status")
     try:
         api_get("/health")
         st.sidebar.success("FastAPI backend is reachable.")
@@ -134,15 +301,56 @@ def show_connection_status() -> None:
         st.sidebar.error("FastAPI backend is not reachable. Start uvicorn backend:app first.")
 
 
+def parse_schema(schema_text: str) -> dict[str, list[str]]:
+    schema_map: dict[str, list[str]] = {}
+    current_table = ""
+
+    for raw_line in schema_text.splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+
+        if line.lower().startswith("table:"):
+            current_table = line.split(":", 1)[1].strip()
+            schema_map[current_table] = []
+            continue
+
+        if current_table and line.startswith("-"):
+            schema_map[current_table].append(line.removeprefix("-").strip())
+
+    return schema_map
+
+
+def show_schema_sidebar() -> None:
+    st.sidebar.markdown("### Schema Explorer")
+    try:
+        payload = api_get("/schema")
+        schema_text = payload.get("schema", "")
+        schema_map = parse_schema(schema_text)
+
+        if not schema_map:
+            st.sidebar.caption("Schema metadata is unavailable.")
+            return
+
+        for table_name, columns in schema_map.items():
+            with st.sidebar.expander(table_name, expanded=False):
+                for column in columns:
+                    st.caption(column)
+    except Exception:
+        st.sidebar.caption("Schema explorer is unavailable until the backend is reachable.")
+
+
 def main() -> None:
     st.set_page_config(page_title="query-mint", layout="wide")
     initialize_session_state()
+    apply_theme()
+    render_header()
 
-    st.title("query-mint")
-    st.caption("Natural language to PostgreSQL with live execution, history, and export.")
+    render_quick_prompts()
 
     with st.sidebar:
         show_connection_status()
+        show_schema_sidebar()
         show_history_sidebar()
 
     prompt = st.text_input(

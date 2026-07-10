@@ -4,13 +4,13 @@ Query-mint is a two-process natural-language-to-SQL app with a FastAPI backend a
 
 ## What it uses
 
-- Python
-- Streamlit for the UI
-- FastAPI for the backend API
-- PostgreSQL for the database
-- psycopg2-binary for database access
-- Google Generative AI for SQL generation
-- pandas for result handling
+- Python: fast iteration speed and strong ecosystem for data and API tooling.
+- Streamlit: rapid single-page interface for prompt, SQL preview, results, and history.
+- FastAPI: clean API layer for SQL generation and execution, with clear request and error handling.
+- PostgreSQL: production-grade relational database with strong SQL support for analytical queries.
+- psycopg2-binary: reliable PostgreSQL driver for executing generated read-only SQL.
+- Google Generative AI: converts natural-language prompts into SQL using schema context.
+- pandas: flexible tabular handling for dynamic columns and CSV export.
 
 ## Database schema
 
